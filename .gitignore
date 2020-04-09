@@ -1,6 +1,7 @@
 account-combos.csv
 chromedriver.exe
 geckodriver.exe
+geckodriver.log
 Proxy Auto Auth.crx
 proxy-list.txt
 proxy-auth.txt
