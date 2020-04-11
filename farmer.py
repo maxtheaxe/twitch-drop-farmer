@@ -27,9 +27,10 @@ def launch(username, password, headless = False, verbose = False, proxy = None):
 	# print("\tLaunching a bot...\n")
 	driver = start_driver(headless, proxy) # start the driver and store it (will be returned)
 	proxy_auth(driver) # make sure everything looks okay for bot
-	driver.get("https://www.twitch.tv/fl0m") # open first stream
-	change_settings(driver) # make it use as little resources as possible
+	# driver.get("https://www.twitch.tv/fl0m") # open first stream
 	login(driver, username, password, verbose) # log into the room with the room link and name
+	find_dropper(driver) # find a good stream to watch
+	change_settings(driver) # make it use as little resources as possible
 	# print("\t", bot_name, "successfully launched.\n")
 	return driver # return driver so it can be stored and used later
 
@@ -181,9 +182,50 @@ def change_settings(driver):
 	# find 160p quality setting and click
 	driver.find_element_by_xpath(
 		"//div[@data-a-target='player-settings-submenu-quality-option']//div[contains(text(), '160p')]").click()
-	# next, make the window much smaller
-	# driver.execute_script("window.resizeTo(516,300)")
-	driver.set_window_size(516, 300)
+	# next, make the window much smaller (rm bc I'm not sure it really changes impact)
+	# driver.set_window_size(516, 300)
+	return
+
+# find_dropper() - finds a live stream doing drops
+def find_dropper(driver):
+	# find a new stream (navigate to twitch tag "drops enabled")
+	driver.get("https://www.twitch.tv/directory/all/tags/c2542d6d-cd10-4532-919b-3d19f30a768b")
+	# then select the first stream in the directory
+	new_stream = driver.find_element_by_xpath(
+		"//div[@data-target='directory-first-item']//a[@class='preview-card-title-link']")
+	# and click on the link, navigating to the new stream
+	new_stream.get_attribute("href").click()
+	return
+
+# check_error() - checks to see if stream has an error; if so, refreshes
+def check_error(driver):
+	try: # attempt to look for an error
+		driver.find_element_by_xpath(
+			"//div[@data-a-target='player-overlay-content-gate']//p[contains(text(), 'Error')]")
+		# an error must've been found if we got this far, so we need to refresh browser
+		driver.refresh()
+	except: # if it throws an exception (assuming I've written this right), no error
+		print("No error found!") # let user know
+	return
+
+# check_live() - checks if the stream is live or not, finds new one if so
+def check_live(driver):
+	try: # attempt to look for live indicator
+		driver.find_element_by_xpath(
+			"//div[@data-target='channel-header-left']//p[contains(text(), 'Live')]")
+		# if we got this far, it found it, and thus the channel is live; do nothing
+	except: # if not, find a new stream and switch to it
+		find_dropper(driver)
+	return
+
+# maintenance() - perform maintenance on bot to ensure it keeps farming
+def maintenance(driver):
+	print("\tPerforming maintenance...\n")
+	# first, check if there's an error displayed (and refresh if so)
+	check_error(driver)
+	# next, check if the stream is live, and find a new one if not
+	check_live(driver)
+	print("\tMaintenance complete.\n")
 	return
 
 # signal_handler() - handles closing the program, to ensure all drivers are quit properly
@@ -208,17 +250,17 @@ def main(argv):
 
 if __name__ == '__main__':
 	# main(sys.argv)
-	num_bots = 1
+	num_bots = 15
 	headless = False
 	verbose = False
-	proxy = read_proxies("proxy-list.txt") # read in proxies from file
+	proxy = read_proxies("proxy-list.txt") # read in proxies from file (new one on every line)
 	bot_list = cavalry(num_bots, headless, verbose, proxy) # store the bots in a list for easy closing later
 	# Tell Python to run the handler() function when SIGINT is recieved
 	signal.signal(signal.SIGINT, signal_handler)
 	print("\tUse Control + C to close all bots.") # print instructions
 	while True:
 		# ask for a stream link
-		selected_stream = input("\tPaste a stream link and hit enter.\n")
+		# selected_stream = input("\tPaste a stream link and hit enter.\n")
 		# tell all the bots to enter that stream
-		enter_stream(selected_stream)
+		# enter_stream(selected_stream)
 		pass
