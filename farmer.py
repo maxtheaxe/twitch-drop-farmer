@@ -28,9 +28,9 @@ def launch(username, password, headless = False, verbose = False, proxy = None):
 	driver = start_driver(headless, proxy) # start the driver and store it (will be returned)
 	proxy_auth(driver) # make sure everything looks okay for bot
 	# driver.get("https://www.twitch.tv/fl0m") # open first stream
-	login(driver, username, password, verbose) # log into the room with the room link and name
 	find_dropper(driver) # find a good stream to watch
 	change_settings(driver) # make it use as little resources as possible
+	login(driver, username, password, verbose) # log into the room with the room link and name
 	# print("\t", bot_name, "successfully launched.\n")
 	return driver # return driver so it can be stored and used later
 
@@ -49,6 +49,8 @@ def start_driver(headless = False, proxy = None):
 	# profile = webdriver.FirefoxProfile() # ff
 	# add auto auth for proxies
 	options.add_extension("Proxy Auto Auth.crx")
+	# add ublock origin to reduce impact, block stuff
+	options.add_extension("ublock_origin.crx")
 	# other settings
 	options.headless = headless # headless or not, passed as arg
 	options.add_experimental_option('excludeSwitches', ['enable-logging']) # chrome only maybe
@@ -164,37 +166,52 @@ def enter_stream(stream_link):
 
 # change_settings() - change settings for max performance
 def change_settings(driver):
-	# hover over video player
-	video_player = driver.find_element_by_class_name('video-player__default-player')
-	# build new action chain to do so
-	action = ActionChains(driver)
-	# hover over own name on participants list
-	action.move_to_element(video_player).perform()
-	# find the gear cog and click
-	# gear = driver.find_element_by_id('7f0643a6c83f8d0cdefcea447825c365').click()
-	gear = driver.find_element_by_xpath(
-		"//div[@data-test-selector='settings-menu-button__animate-wrapper']//button[@data-a-target='player-settings-button']")
-	gear.click()
-	# find quality dropdown and click
-	dropdown = driver.find_element_by_xpath(
-		"//div[contains(text(), 'Quality')]")
-	dropdown.click()
-	# find 160p quality setting and click
-	driver.find_element_by_xpath(
-		"//div[@data-a-target='player-settings-submenu-quality-option']//div[contains(text(), '160p')]").click()
-	# next, make the window much smaller (rm bc I'm not sure it really changes impact)
-	# driver.set_window_size(516, 300)
+	try: # try to click right away
+		# hover over video player
+		video_player = driver.find_element_by_class_name('video-player__default-player')
+		# build new action chain to do so
+		action = ActionChains(driver)
+		# hover over own name on participants list
+		action.move_to_element(video_player).perform()
+		# find the gear cog and click
+		# gear = driver.find_element_by_id('7f0643a6c83f8d0cdefcea447825c365').click()
+		gear = driver.find_element_by_xpath(
+			"//div[@data-test-selector='settings-menu-button__animate-wrapper']//button[@data-a-target='player-settings-button']")
+		gear.click()
+		# find quality dropdown and click
+		dropdown = driver.find_element_by_xpath(
+			"//div[contains(text(), 'Quality')]")
+		dropdown.click()
+		# find 160p quality setting and click
+		driver.find_element_by_xpath(
+			"//div[@data-a-target='player-settings-submenu-quality-option']//div[contains(text(), '160p')]").click()
+		# next, make the window much smaller (rm bc I'm not sure it really changes impact)
+		# driver.set_window_size(516, 300)
+	except: # try again if it wasn't clickable (again, go away)
+		time.sleep(5) # wait
+		change_settings(driver) # call again
+	time.sleep(2) # wait, let em save
 	return
 
 # find_dropper() - finds a live stream doing drops
 def find_dropper(driver):
 	# find a new stream (navigate to twitch tag "drops enabled")
 	driver.get("https://www.twitch.tv/directory/all/tags/c2542d6d-cd10-4532-919b-3d19f30a768b")
-	# then select the first stream in the directory
-	new_stream = driver.find_element_by_xpath(
-		"//div[@data-target='directory-first-item']//a[@class='preview-card-title-link']")
-	# and click on the link, navigating to the new stream
-	new_stream.get_attribute("href").click()
+	try: # try to click it right away
+		# then select the first stream in the directory
+		new_stream = driver.find_element_by_xpath(
+		"//div[@data-target='directory-first-item']//a[@data-a-target='preview-card-title-link']")
+		# and click on the link, navigating to the new stream
+		new_stream.get_attribute("href").click()
+	except: # if it isn't clickable (sometimes takes a sec to load properly)
+		# too lazy to actually check and wait, go away Lrrr
+		# print("\tFailed. Trying again, please wait...\n")
+		time.sleep(5)
+		# then select the first stream in the directory
+		new_stream = driver.find_element_by_xpath(
+		"//div[@data-target='directory-first-item']//a[@data-a-target='preview-card-title-link']")
+		# and click on the link, navigating to the new stream
+		new_stream.click()
 	return
 
 # check_error() - checks to see if stream has an error; if so, refreshes
@@ -228,6 +245,22 @@ def maintenance(driver):
 	print("\tMaintenance complete.\n")
 	return
 
+# group_maintenance() - performs maintenance on list of bots
+def group_maintenance(driver_list):
+	# for each bot in list
+	for i in range(len(driver_list)):
+		# run maintenance
+		maintenance(driver_list[i])
+	return
+
+# group_maintenance() - finds a dropper for all bots
+def find_streams(driver_list):
+	# for each bot in list
+	for i in range(len(driver_list)):
+		# run maintenance
+		find_dropper(driver_list[i])
+	return
+
 # signal_handler() - handles closing the program, to ensure all drivers are quit properly
 # reference: https://www.devdungeon.com/content/python-catch-sigint-ctrl-c
 def signal_handler(signal_received, frame):
@@ -258,7 +291,12 @@ if __name__ == '__main__':
 	# Tell Python to run the handler() function when SIGINT is recieved
 	signal.signal(signal.SIGINT, signal_handler)
 	print("\tUse Control + C to close all bots.") # print instructions
+	# wait 25 min for login code
+	time.sleep(1500)
 	while True:
+		# run maintenance every 20 minutes
+		group_maintenance(bot_list)
+		time.sleep(1200)
 		# ask for a stream link
 		# selected_stream = input("\tPaste a stream link and hit enter.\n")
 		# tell all the bots to enter that stream
