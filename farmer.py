@@ -238,10 +238,10 @@ def check_live(driver):
 # maintenance() - perform maintenance on bot to ensure it keeps farming
 def maintenance(driver):
 	print("\tPerforming maintenance...\n")
-	# first, check if there's an error displayed (and refresh if so)
-	check_error(driver)
 	# next, check if the stream is live, and find a new one if not
 	check_live(driver)
+	# check if there's an error displayed (and refresh if so)
+	check_error(driver)
 	print("\tMaintenance complete.\n")
 	return
 
@@ -260,6 +260,24 @@ def find_streams(driver_list):
 		# run maintenance
 		find_dropper(driver_list[i])
 	return
+
+# get_driver_info() - export driver info in case restart is desired
+# reference: https://stackoverflow.com/questions/8344776/can-selenium-interact-with-an-existing-browser-session
+def get_driver_info(driver):
+	url = driver.command_executor._url       # "http://127.0.0.1:60622/hub"
+	session_id = driver.session_id            # '4e167f26-dc1d-4f51-a207-f761eaf73c31'
+	return [url, session_id] # return both things in a list
+
+# save_drivers() - gets and saves driver info for every driver
+def save_drivers(driver_list):
+	# make new list to store info
+	saved_info = []
+	# loop over all drivers
+	for i in range(len(driver_list)):
+		# append info for each driver to main list as sublist
+		save_info.append(get_driver_info(driver_list[i]))
+	# return all saved info as 2d list
+	return saved_info
 
 # signal_handler() - handles closing the program, to ensure all drivers are quit properly
 # reference: https://www.devdungeon.com/content/python-catch-sigint-ctrl-c
@@ -295,7 +313,8 @@ if __name__ == '__main__':
 	time.sleep(1500)
 	while True:
 		# run maintenance every 20 minutes
-		group_maintenance(bot_list)
+		try:
+			group_maintenance(bot_list)
 		time.sleep(1200)
 		# ask for a stream link
 		# selected_stream = input("\tPaste a stream link and hit enter.\n")
