@@ -23,12 +23,12 @@ from win10toast import ToastNotifier
 # ref: https://stackoverflow.com/questions/41030257/is-there-a-way-to-bundle-a-binary-file-such-as-chromedriver-with-a-single-file
 current_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile(inspect.currentframe() ))[0]))
 
-# launch() - launch sequence to get driver started, logged in, and prepared to work
+# launch() - launch sequence to get driver started
 def launch(username, password, headless = False, verbose = False, proxy = None):
 	# print("\tLaunching a bot...\n")
 	driver = start_driver(headless, proxy) # start the driver and store it (will be returned)
 	proxy_auth(driver) # make sure everything looks okay for bot
-	login(driver, username, password, verbose) # log into the room with the room link and name
+	input("press enter to continue")
 	# print("\t", bot_name, "successfully launched.\n")
 	return driver # return driver so it can be stored and used later
 
@@ -175,52 +175,45 @@ def read_proxies(file_name):
 		lines = file_handle.readlines()
 	return lines # return list of proxies
 
-# cavalry() - brings the "cavalry," by launching bots with creds from list
-def cavalry(num_bots = 1, headless = False, verbose = False, proxy = None):
-	driver_list = [] # create list for storing newly-created bots
+# create_accounts() - creates accs with creds from list, using diff proxy for each
+def create_accounts(num_accs = 1, headless = False, verbose = False, proxy = None):
+	global finished_accs # I've never used global variables with python, so idrk what I'm doin
 	creds = grab_creds() # store creds in 2d array
-	for i in range(num_bots): # loop for as many times as num bots desired
+	for i in range(num_accs): # loop for as many times as num accs desired
 		# set bot_name by popping name from attendance list (name_options)
 		username = creds[i][0] # get username from first element on each sublist
 		password = creds[i][1] # get password from second element on each sublist
-		# launch another driver/client with the given info
+		# create another driver/client with the given info
 		driver = launch(username, password, headless, verbose, proxy[i])
-		# store the newly-created bot in our list of drivers
-		driver_list.append(driver)
-	return driver_list # return the list of newly-created drivers
+		# create a twitch account with the given info
+		create_twitch(driver, username, password) # create acc using driver with given deets
+		# quit the driver, after finished making accounts
+		driver.quit()
+		# print results to keep user updated
+		print("\tNew account\t", username, ":", password)
+		# append finished acc details to global list
+		finished_accs.append([username, password]) # maybe append proxy[i] later
+	return
 
-# get_driver_info() - export driver info in case restart is desired
-# reference: https://stackoverflow.com/questions/8344776/can-selenium-interact-with-an-existing-browser-session
-def get_driver_info(driver):
-	url = driver.command_executor._url       # "http://127.0.0.1:60622/hub"
-	session_id = driver.session_id            # '4e167f26-dc1d-4f51-a207-f761eaf73c31'
-	return [url, session_id] # return both things in a list
+# write_accounts() - write finishd accounts to a file
+# reference: https://www.programiz.com/python-programming/writing-csv-files
+def write_accounts(finished_accs, filename = "finished-account-combos.csv"):
+	with open(filename, 'w', newline='') as file:
+		writer = csv.writer(file)
+		writer.writerow(["username", "password"]) # write the headers
+		writer.writerows(finished_accs) # write the account combos to the csv
+	return
 
-# save_drivers() - gets and saves driver info for every driver
-def save_drivers(driver_list):
-	# make new list to store info
-	saved_info = []
-	# loop over all drivers
-	for i in range(len(driver_list)):
-		# append info for each driver to main list as sublist
-		save_info.append(get_driver_info(driver_list[i]))
-	# return all saved info as 2d list
-	return saved_info
-
-# signal_handler() - handles closing the program, to ensure all drivers are quit properly
+# signal_handler() - handles closing the program, writes finished accounts to file
 # reference: https://www.devdungeon.com/content/python-catch-sigint-ctrl-c
 def signal_handler(signal_received, frame):
-	global bot_list # I've never used global variables with python, so idrk what I'm doin
+	global finished_accs # I've never used global variables with python, so idrk what I'm doin
 	# Handle any cleanup here
-	print("\n\tClosing all bots, please wait...\n")
-	# for all bots stored in master list
-	for i in range(len(bot_list)):
-		bot_list[i].quit() # quit each bot window
-	print("\tAll done! Hopefully you got some drops!\n")
-	sys.exit(0)
+	write_accounts(finished_accs) # write the accounts that were finished to a file
+	sys.exit(0) # exit
 
 def main(argv):
-	print("\n\t--- zoom.rip | making remote learning fun ---\n")
+	print("\n\t--- twitch-account-farmer ---\n")
 	driver_list = [] # store the bots so we can close 'em later
 	main_driver = launch("xxx", False)
 	driver_list.append(main_driver) # store the main one in the list
@@ -229,23 +222,15 @@ def main(argv):
 
 if __name__ == '__main__':
 	# main(sys.argv)
-	num_bots = 15
+	num_accs = 1
 	headless = False
 	verbose = False
 	proxy = read_proxies("proxy-list.txt") # read in proxies from file (new one on every line)
-	bot_list = cavalry(num_bots, headless, verbose, proxy) # store the bots in a list for easy closing later
+	finished_accs = [] # create list for storing newly-created accs
+	create_accounts(num_accs, headless, verbose, proxy) # make new accounts, store them in global
+	# (doing it this way in case of crash before finished--don't want to lose accs already done)
 	# Tell Python to run the handler() function when SIGINT is recieved
 	signal.signal(signal.SIGINT, signal_handler)
 	print("\tUse Control + C to close all bots.") # print instructions
-	# wait 25 min for login code
-	time.sleep(1500)
 	while True:
-		# run maintenance every 20 minutes
-		try:
-			group_maintenance(bot_list)
-		time.sleep(1200)
-		# ask for a stream link
-		# selected_stream = input("\tPaste a stream link and hit enter.\n")
-		# tell all the bots to enter that stream
-		# enter_stream(selected_stream)
 		pass

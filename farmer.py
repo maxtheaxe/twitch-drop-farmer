@@ -292,7 +292,7 @@ def signal_handler(signal_received, frame):
 	sys.exit(0)
 
 def main(argv):
-	print("\n\t--- zoom.rip | making remote learning fun ---\n")
+	print("\n\t--- twitch-account-farmer ---\n")
 	driver_list = [] # store the bots so we can close 'em later
 	main_driver = launch("xxx", False)
 	driver_list.append(main_driver) # store the main one in the list
