@@ -158,6 +158,52 @@ def captcha_check(driver, first = True):
 			captcha_check(driver, False) # call self again
 	return # if we've gotten here, there's no captcha--it's safe to move on
 
+# create_riot() - make new riot account
+def create_riot(driver, username, password, email_domain = "flarn.xyz"):
+	# first, navigate to the signup page
+	driver.get("https://www.twitch.tv/signup")
+	# wait until page is properly loaded
+	try: # wait (for 10 sec) and make sure
+		wait = WebDriverWait(driver, 10)
+		# wait until terms of service link is clickable
+		element = wait.until(EC.element_to_be_clickable(
+			(By.xpath, "//a[@href='https://www.twitch.tv/p/legal/terms-of-service/'")))
+		# if it is visible, it's loaded properly
+		if EC.visibility_of(driver.find_element_by_xpath(
+			"//a[@href='https://www.twitch.tv/p/legal/terms-of-service/'")):
+			if verbose:
+				print("\tSuccessfully loaded signup page.\n")
+	except: # something went wrong, we weren't able to load the page properly
+		print("\tError: Page not loading.\n")
+		sys.exit()
+	# next, type in your details
+	driver.find_element_by_id("signup-username").send_keys(username) # send username
+	driver.find_element_by_id("password-input").send_keys(password) # send password
+	driver.find_element_by_id("password-input-confirmation").send_keys(password) # verify
+	# now enter a birth month
+	bday_dropdown = driver.find_element_by_xpath(
+		"//select[@data-a-target='birthday-month-select']") # find the dropdown
+	bday_dropdown.click() # click the dropdown
+	bday_dropdown.send_keys(Keys.DOWN) # press the down arrow to select january
+	bday_dropdown.send_keys(Keys.RETURN) # press enter to save that
+	# now enter a day of the month
+	bday_day = driver.find_element_by_xpath(
+		"//input[@aria-label='Enter the day of your birth']") # find the element
+	bday_day.send_keys("1") # enter the number
+	# now enter the year
+	bday_year = driver.find_element_by_xpath(
+		"//input[@aria-label='Enter the year of your birth']") # find the element
+	bday_year.send_keys("1985") # type it in
+	# now enter the email
+	email = username + email_domain # build the email
+	driver.find_element_by_id("email-input").send_keys(email) # type in the email
+	# now click the signup button
+	signup_button = driver.find_element_by_xpath("//div[@class='tw-flex-grow-0']") # find it
+	signup_button.click() # click it
+	# now check if a captcha has appeared
+	captcha_check(driver) # call checker
+	return
+
 # grab_creds() - grabs credentials from file
 def grab_creds():
 	# read in data and add it to 2d array data
