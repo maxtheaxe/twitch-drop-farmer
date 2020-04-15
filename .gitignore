@@ -8,3 +8,7 @@ proxy-auth.txt
 ublock_origin.crx
 new-account-combos.csv
 finished-account-combos.csv
+build
+dist
+temp
+__pycache__

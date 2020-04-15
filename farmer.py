@@ -17,6 +17,7 @@ import os
 import inspect
 from fake_useragent import UserAgent
 import csv
+from win10toast import ToastNotifier
 
 # set path to chrome driver for packaging purposes
 # ref: https://stackoverflow.com/questions/41030257/is-there-a-way-to-bundle-a-binary-file-such-as-chromedriver-with-a-single-file
@@ -26,11 +27,15 @@ current_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile(
 def launch(username, password, headless = False, verbose = False, proxy = None):
 	# print("\tLaunching a bot...\n")
 	driver = start_driver(headless, proxy) # start the driver and store it (will be returned)
-	proxy_auth(driver) # make sure everything looks okay for bot
+	if proxy != None: # if proxies, are given, grab the creds for 'em
+		proxy_auth(driver) # make sure everything looks okay for bot
 	# driver.get("https://www.twitch.tv/fl0m") # open first stream
 	find_dropper(driver) # find a good stream to watch
 	change_settings(driver) # make it use as little resources as possible
 	login(driver, username, password, verbose) # log into the room with the room link and name
+	toaster = ToastNotifier()
+	toaster.show_toast("Twitch Drop Farmer","Please enter your confirmation code.")
+	input("\n\tHit Enter to continue...") # wait for user prompt to resume
 	# print("\t", bot_name, "successfully launched.\n")
 	return driver # return driver so it can be stored and used later
 
@@ -60,7 +65,7 @@ def start_driver(headless = False, proxy = None):
 	if (proxy != None):
 		 # IP:PORT or HOST:PORT
 		options.add_argument('--proxy-server=%s' % proxy)
-		print("using a proxy: ", proxy)
+		print("\n\tUsing proxy: ", proxy)
 		# profile.set_preference("network.proxy.type", 1) # ff
 		# profile.set_preference("network.proxy.http", proxy) # ff
 		# profile.set_preference("network.proxy.http_port", port) # ff
@@ -150,8 +155,13 @@ def cavalry(num_bots = 1, headless = False, verbose = False, proxy = None):
 		# set bot_name by popping name from attendance list (name_options)
 		username = creds[i][0] # get username from first element on each sublist
 		password = creds[i][1] # get password from second element on each sublist
-		# launch another driver/client with the given info
-		driver = launch(username, password, headless, verbose, proxy[i])
+		# if proxy is given
+		if proxy != None:
+			# launch another driver/client with the given info
+			driver = launch(username, password, headless, verbose, proxy[i])
+		else: # otherwise, don't use a proxy
+			# launch another driver/client with the given info
+			driver = launch(username, password, headless, verbose)
 		# store the newly-created bot in our list of drivers
 		driver_list.append(driver)
 	return driver_list # return the list of newly-created drivers
@@ -222,7 +232,7 @@ def check_error(driver):
 		# an error must've been found if we got this far, so we need to refresh browser
 		driver.refresh()
 	except: # if it throws an exception (assuming I've written this right), no error
-		print("No error found!") # let user know
+		print("\n\tNo error found!") # let user know
 	return
 
 # check_live() - checks if the stream is live or not, finds new one if so
@@ -292,7 +302,7 @@ def signal_handler(signal_received, frame):
 	sys.exit(0)
 
 def main(argv):
-	print("\n\t--- twitch-account-farmer ---\n")
+	print("\n\t--- Twitch Drop Farmer ---\n")
 	driver_list = [] # store the bots so we can close 'em later
 	main_driver = launch("xxx", False)
 	driver_list.append(main_driver) # store the main one in the list
@@ -300,21 +310,33 @@ def main(argv):
 	time.sleep(60)
 
 if __name__ == '__main__':
+	print("\n\t--- Twitch Drop Farmer by Max ---\n")
 	# main(sys.argv)
-	num_bots = 15
+	num_bots = int(input("\tHow many accounts do you want to idle?\n\t(Type it in and press Enter)\n\n\t"))
 	headless = False
 	verbose = False
-	proxy = read_proxies("proxy-list.txt") # read in proxies from file (new one on every line)
+	# check if proxy list exists, otherwise we won't use proxies
+	if os.path.exists("proxy-list.txt"):
+		proxy = read_proxies("proxy-list.txt") # read in proxies from file (new one on every line)
+	# if the user is using more than one bot, let 'em know it's a bad idea
+	elif (num_bots > 1):
+		print("\tWarning: Running multiple bots on a single IP Address will have consequences, I recommend against it.")
+		proxy = None # set proxy as none so we don't have to do diff calls
+	else:
+		proxy = None # set proxy as none so we don't have to do diff calls
+	print("\n\tStarting idling...")
 	bot_list = cavalry(num_bots, headless, verbose, proxy) # store the bots in a list for easy closing later
 	# Tell Python to run the handler() function when SIGINT is recieved
 	signal.signal(signal.SIGINT, signal_handler)
-	print("\tUse Control + C to close all bots.") # print instructions
-	# wait 25 min for login code
-	time.sleep(1500)
+	print("\n\tUse Control + C to close all bots.") # print instructions
+	# wait 25 min for login code (this was a workaround for when I had issues getting codes)
+	# time.sleep(1500)
 	while True:
 		# run maintenance every 20 minutes
 		try:
 			group_maintenance(bot_list)
+		except:
+			print("\tCheck your internet speed--it may not be fast enough to run this.")
 		time.sleep(1200)
 		# ask for a stream link
 		# selected_stream = input("\tPaste a stream link and hit enter.\n")
