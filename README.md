@@ -18,6 +18,7 @@
 _For now, I'm not gonna build executables to minimize abuse_
 * Clone the repository to a local directory
 * Install the dependencies
+* [Download appropriate chromedriver](https://sites.google.com/a/chromium.org/chromedriver/home) and place in same directory
 * Create `account-combos.csv` (username, password)
 * Optional: Create `proxy-list.txt` (one proxy per line)
 * Optional: Create `proxy-auth.txt` (username \n password)
