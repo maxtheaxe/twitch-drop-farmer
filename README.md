@@ -28,8 +28,8 @@ _For now, I'm not gonna build executables to minimize abuse_
 * Type in desired number of accounts, press Enter
 * Enter account verification codes when prompted
 
-## Disclaimers
-* Primarily: be considerate⁠—save keys for the rest of us
+## Disclaimers & Notes
+* Primarily: be considerate⁠—save keys for the rest of us (I waited to release this to minimize abuse)
 * Not super practical for dedicated use⁠—this is a fun project
 * Could _definitely_ be cleaned up, open to pull requests
 * System resource usage is heavy
