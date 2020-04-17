@@ -30,4 +30,5 @@ _For now, I'm not gonna build executables to minimize abuse_
 ## Disclaimers
 * Primarily: be considerate⁠—save keys for the rest of us
 * Not super practical for dedicated use⁠—this is a fun project
+* Could _definitely_ be cleaned up, open to pull requests
 * System resource usage is heavy
