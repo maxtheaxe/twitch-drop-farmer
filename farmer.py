@@ -14,6 +14,7 @@ import time
 import random
 import signal
 import os
+from os import path
 import inspect
 from fake_useragent import UserAgent
 import csv
@@ -52,10 +53,13 @@ def start_driver(headless = False, proxy = None):
 	options = webdriver.ChromeOptions()
 	# options = webdriver.FirefoxOptions() # ff
 	# profile = webdriver.FirefoxProfile() # ff
-	# add auto auth for proxies
-	options.add_extension("Proxy Auto Auth.crx")
-	# add ublock origin to reduce impact, block stuff
-	options.add_extension("ublock_origin.crx")
+	# check if extensions are downloaded
+	if path.exists("ublock_origin.crx") and (path.exists("proxy_auto_auth.crx")):
+		options.add_extension("ublock_origin.crx") # add ublock origin to reduce impact, block stuff
+		options.add_extension("proxy_auto_auth.crx") # add auto auth for proxies
+	else:
+		print("\n\tHang on! You may have forgotten to set up the extensions. See:\n\n\thttps://github.com/maxtheaxe/twitch-drop-farmer/issues/2#issuecomment-868561688\n")
+		exit()
 	# other settings
 	options.headless = headless # headless or not, passed as arg
 	options.add_experimental_option('excludeSwitches', ['enable-logging']) # chrome only maybe
